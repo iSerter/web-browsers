@@ -2,12 +2,16 @@ module.exports = {
     apps: [
       {
         name: 'api-server',
-        script: './src/index.js',
+        script: 'npm',
+        args: 'run start',
+        instances: 1,
         watch: true,
       },
       {
         name: 'queue-workers',
-        script: './src/queue-workers.js',
+        script: 'npm',
+        args: 'run start:queue-workers',
+        instances: 1,
         watch: true,
       },
     ],

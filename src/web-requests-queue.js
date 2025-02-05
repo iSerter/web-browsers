@@ -38,6 +38,7 @@ class WebRequestsQueue {
     try {
       await this.client.lPush(this.getQueueName(queueNumber), requestId);
   
+      console.log('pushing request config to queue', JSON.stringify(request));
       await this.client.hSet(requestId, 'config', JSON.stringify(request));
       await this.client.hSet(requestId, 'status', 0);
   
@@ -62,6 +63,7 @@ class WebRequestsQueue {
   
       const requests = requestIds.map(async (requestId) => {
         const config = await this.client.hGet(requestId, 'config');
+        console.log('read config from redis', config);
         const status = await this.client.hGet(requestId, 'status');
         return { id: requestId, config: JSON.parse(config), status };
       });

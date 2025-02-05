@@ -3,3 +3,7 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+.npm
+.pm2
+.cache
+.DS_Store

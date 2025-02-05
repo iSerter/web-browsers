@@ -10,8 +10,12 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     ca-certificates \
     apt-transport-https \
+    xz \
+    bzip2 \
     xvfb \
+    libasound2 libgconf-2-4 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Install redis-server
 RUN apt-get update && apt-get install -y redis-server
@@ -36,6 +40,9 @@ RUN npm install -g pm2
 # Install Puppeteer globally
 RUN npm install -g puppeteer
 
+# Install Puppeteer Browsers
+RUN npx @puppeteer/browsers install chrome@stable
+
 # Install inotify-tools
 RUN apt-get update && apt-get install -y inotify-tools
 
@@ -55,4 +62,4 @@ COPY ../../ .
 EXPOSE 3030
 
 # Start the application
-CMD service dbus start && service redis-server start && pm2-runtime start ecosystem.config.js
+CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && pm2-runtime start ecosystem.config.js

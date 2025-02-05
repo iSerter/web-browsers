@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     ca-certificates \
     apt-transport-https \
+    x11-xserver-utils x11-utils \
     xvfb \
     inotify-tools
 
@@ -35,6 +36,7 @@ RUN apt-get install -y --no-install-recommends \
     fonts-thai-tlwg \
     fonts-kacst \
     fonts-freefont-ttf fonts-terminus fonts-inconsolata fonts-dejavu ttf-bitstream-vera fonts-noto-core fonts-noto-cjk fonts-noto-extra fonts-font-awesome \
+    libasound2 libgconf-2-4 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
     libxss1
 
 # delete apt lists, /tmp/*.deb files, and /var/cache/apt/archives to free up space
@@ -49,7 +51,7 @@ RUN groupadd -r app && useradd -rm -g app -G audio,video app
 # Set up the working directory
 WORKDIR /home/app
 
-# Install Node dependencies
+# Install NPM dependencies
 COPY package.json ./package.json
 COPY package-lock.json ./package-lock.json
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
@@ -58,7 +60,7 @@ RUN rm -rf ./node_modules && \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" npm install --only=production && \
     npm cache clean --force
 
-# Copy the app
+# Copy rest of the app
 COPY . .
 
 # Give app user access to all the project folders
@@ -71,4 +73,4 @@ EXPOSE 3030
 # Start dbus and redis-server as root, but run the app as the 'app' user
 USER root
 # ENV DBUS_SESSION_BUS_ADDRESS autolaunch:
-CMD service dbus start && service redis-server start && su - app -c "pm2-runtime start ecosystem.config.js"
+CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && su - app -c "pm2-runtime start ecosystem.config.js"

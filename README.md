@@ -12,11 +12,11 @@ A basic setup for my web browser experiments. Starting with Puppeteer first.
 ### Launch a container
 
 ```sh
-docker-compose --profile debian up
+docker compose --profile debian up
 ```
  or 
 ```sh
-docker-compose --profile macos up
+docker compose --profile macos up
 ``` 
 depending on your host system.
 

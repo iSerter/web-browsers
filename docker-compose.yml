@@ -14,7 +14,7 @@ services:
     environment:
       - LANG=en_US.UTF-8
     command: >
-      sh -c "service dbus start && service redis-server start && su - app -c 'npm install && pm2-runtime start ecosystem.config.js'"
+      sh -c "service dbus start && service redis-server start && sh ./util/start-x-screens.sh && su - app -c 'npm install && pm2-runtime start ecosystem.config.js'"
     profiles:
       - debian
 
@@ -22,7 +22,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/node16-chromium/Dockerfile
-    container_name: node16-chromium
+    container_name: my-web-browsers-node16-chromium
     platform: linux/arm64
     volumes:
       - .:/home/app
