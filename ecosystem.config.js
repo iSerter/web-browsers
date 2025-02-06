@@ -10,7 +10,7 @@ module.exports = {
       {
         name: 'queue-workers',
         script: 'npm',
-        args: 'run start:queue-workers',
+        args: 'run start:workers',
         instances: 1,
         watch: true,
       },
