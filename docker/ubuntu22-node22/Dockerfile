@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y inotify-tools
 # Set up the working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
+# Copy package.json to the working directory
 COPY ../../package.json ./
 
 # Install Node.js dependencies

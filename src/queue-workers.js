@@ -33,7 +33,7 @@ const startQueueWorker = async (queueNumber, browser) => {
       const request = requests[i];
       const { id, config } = request;
       const { url, headers, method } = config;
-      console.log(`Queue ${queueNumber} processing request ${id} for URL: ${url}`);
+      console.log(`Processing request ${id}, URL: ${url}`);
       const page = await browser.newPage();
       await page.setExtraHTTPHeaders(headers);
       await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -46,6 +46,7 @@ const startQueueWorker = async (queueNumber, browser) => {
       await queue.updateRequestResult(id, result);
       await queue.updateRequestStatus(id, 1);
       await page.close();
+      console.log(`Done processing request ${id}`);
     }
     // wait 70ms 
     await new Promise((resolve) => setTimeout(resolve, 70));

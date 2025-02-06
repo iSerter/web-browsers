@@ -19,6 +19,10 @@ const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
 
       // chromePath = '/usr/bin/google-chrome';
 
+      // Set DBUS_SESSION_BUS_ADDRESS environment variable
+      // process.env.DBUS_SESSION_BUS_ADDRESS = "unix:path=/run/dbus/system_bus_socket";
+
+
       try {
         xvfbSession = new Xvfb({
           silent: true,
@@ -39,6 +43,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
         throw new Error("xvfbSession is not properly configured");
       }
 
+      const crashDumpsDir = "/tmp/chrome_crash_dumps";
       const chromeFlags = [
         "--no-first-run",
         "--no-sandbox",
@@ -48,6 +53,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
         "--disable-dev-shm-usage",
         "--ignore-certificate-errors",
         "--window-size=1920,1080",
+        `--crash-dumps-dir=${crashDumpsDir}`,
       ].concat(args);
 
       if (proxy && proxy.host && proxy.host.length > 0) {

@@ -60,13 +60,18 @@ class WebRequestsQueue {
   async getRequests(queueNumber = 1) {
     try {
       const requestIds = await this.client.lRange(this.getQueueName(queueNumber), 0, -1);
+
+      // console.log('read requestIds with lRange', requestIds);
   
-      const requests = requestIds.map(async (requestId) => {
+      const requests = await Promise.all(requestIds.map(async (requestId) => {
         const config = await this.client.hGet(requestId, 'config');
-        console.log('read config from redis', config);
+        // console.log(`read ${requestId} config from redis`, config);
         const status = await this.client.hGet(requestId, 'status');
+        // console.log(`read ${requestId} status from redis`, status);
         return { id: requestId, config: JSON.parse(config), status };
-      });
+      }));
+
+      // console.log('final requests array', requests);
   
       return requests;
     } catch (err) {

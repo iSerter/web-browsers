@@ -1,12 +1,13 @@
-FROM --platform=linux/amd64 node:22-slim
+FROM node:22-slim
 
-ENV LANG en_US.UTF-8
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
+ENV LANG=en_US.UTF-8
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV XDG_CONFIG_HOME=/tmp/.chromium-config
 ENV XDG_CACHE_HOME=/tmp/.chromium-cache
 
 # Install core dependencies
 RUN apt-get update && apt-get install -y \
+    dbus \
     curl \
     sudo \
     build-essential \
@@ -57,7 +58,7 @@ COPY package-lock.json ./package-lock.json
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
 RUN rm -rf ./node_modules && \
     # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" npm install --only=production && \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" npm install && \
     npm cache clean --force
 
 # Copy rest of the app
@@ -67,10 +68,13 @@ COPY . .
 RUN chown -R app:app /home/app
 RUN chmod -R 777 /home/app
 
+# make /tmp writable
+RUN chmod -R 777 /tmp
+
 # Expose the port your app runs on
 EXPOSE 3030
 
 # Start dbus and redis-server as root, but run the app as the 'app' user
 USER root
 # ENV DBUS_SESSION_BUS_ADDRESS autolaunch:
-CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && su - app -c "pm2-runtime start ecosystem.config.js"
+CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && su - app -c "pm2-runtime start ecosystem.config.js" && tail -f /dev/null
