@@ -7,7 +7,7 @@ A basic setup for my web browser experiments. Starting with Puppeteer first.
 - - it checks the request status every 70ms with a 30s timeout.
 
 
-## Usage
+## Setup
 
 ### Create image 
 ```
@@ -30,6 +30,7 @@ docker compose --profile macos up
 ``` 
 depending on your host system.
 
+## Use 
 
 ```sh
 curl -X POST http://127.0.0.1:3030/browse -H "Content-Type: application/json" -d '{"url": "https://iserter.com/"}'
@@ -42,7 +43,8 @@ For a quick verification of the API server's availability: `curl http://127.0.0.
 ### Troubleshooting & Frequently Used Commands 
 
 ```
-npx @puppeteer/browsers install chrome@stable
+docker exec -it wb-app /bin/bash
+npx @puppeteer/browsers install chrome@133.0.6943.53
 export PUPPETEER_EXECUTABLE_PATH=/home/app/chrome/linux-133.0.6943.53/chrome-linux64/chrome
 export DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
 ```
@@ -59,4 +61,5 @@ dbus-send --system --dest=org.freedesktop.DBus --type=method_call --print-reply 
 
 ### TODO
 
-Fontconfig error: No writable cache directories
+- run the app with `app` user. (currently chrome is complaining about it)
+- implement proxies

@@ -74,7 +74,6 @@ RUN chmod -R 777 /tmp
 # Expose the port your app runs on
 EXPOSE 3030
 
-# Start dbus and redis-server as root, but run the app as the 'app' user
 USER root
 # ENV DBUS_SESSION_BUS_ADDRESS autolaunch:
-CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && su - app -c "pm2-runtime start ecosystem.config.js"
+CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && pm2-runtime start ecosystem.config.js

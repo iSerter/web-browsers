@@ -52,6 +52,8 @@ const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
         "--disable-blink-features=AutomationControlled",
         "--disable-dev-shm-usage",
         "--ignore-certificate-errors",
+        "--ignore-certificate-errors-spki-list",
+        "--disable-extensions",
         "--window-size=1920,1080",
         `--crash-dumps-dir=${crashDumpsDir}`,
       ].concat(args);
