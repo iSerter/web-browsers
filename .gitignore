@@ -7,3 +7,4 @@ node_modules/
 .pm2
 .cache
 .DS_Store
+.env

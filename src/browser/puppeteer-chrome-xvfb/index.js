@@ -1,5 +1,9 @@
 const Xvfb = require("xvfb");
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-extra");
+const puppeteerStealth = require("puppeteer-extra-plugin-stealth");
+puppeteer.use(puppeteerStealth());
+const proxyRouter = require("@extra/proxy-router");
+
 
 const stopSession = async (xvfbSession) => {
   try {
@@ -8,7 +12,7 @@ const stopSession = async (xvfbSession) => {
   return true;
 };
 
-const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
+const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
   return new Promise(async (resolve, reject) => {
     try {
       let xvfbSession = null;
@@ -58,8 +62,14 @@ const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
         `--crash-dumps-dir=${crashDumpsDir}`,
       ].concat(args);
 
-      if (proxy && proxy.host && proxy.host.length > 0) {
-        chromeFlags.push(`--proxy-server=${proxy.host}:${proxy.port}`);
+      proxy = proxy || process.env.PROXY_DEFAULT;
+      if (proxy) {
+        console.log('Using proxy:', proxy);
+        puppeteer.use(
+          proxyRouter({
+            proxies: { DEFAULT: proxy },
+          }),
+        );
       }
 
       console.log("Launching browser with the following configuration:");
@@ -72,6 +82,8 @@ const startSession = ({ args = [], customConfig = {}, proxy = {} }) => {
         executablePath: chromePath,
         args: chromeFlags,
         dumpio: true,
+        ignoreHTTPSErrors: true,
+        devtools: false,
         timeout: 8000, // needed for strange bug. https://github.com/puppeteer/puppeteer/issues/10556#issuecomment-1681602191
         env: {
             DISPLAY: xvfbSession._display

@@ -8,9 +8,11 @@ const queue = new WebRequestsQueue(queueCount);
 const runQueueWorkers = async () => {
   await queue.start();
   const queues = [];
+
+  proxy = process.env.PROXY_DEFAULT;
   
   for(let i=1; i<=queueCount; i++) {
-    const { browser, xvfbSession } = await startSession({});
+    const { browser, xvfbSession } = await startSession({ proxy });
     console.log(JSON.stringify({ browser: browser.wsEndpoint(), display: xvfbSession.display }));
     startQueueWorker(i, browser);
     queues.push({ queueNumber: i, browser, xvfbSession });
