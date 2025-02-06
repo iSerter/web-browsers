@@ -42,7 +42,6 @@ const startQueueWorker = async (queueNumber, browser) => {
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
       });
-      await page.waitForNavigation({ waitUntil: 'networkidle0' });
       // wait 50-250ms
       const waitTime = Math.floor(Math.random() * 200) + 50;
       await new Promise((resolve) => setTimeout(resolve, waitTime));
@@ -50,7 +49,8 @@ const startQueueWorker = async (queueNumber, browser) => {
       await page.evaluate(() => {
         window.scrollTo(0, 0);
       });
-      await page.waitForNavigation({ waitUntil: 'networkidle0' });
+      // wait 50ms
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const result = await page.evaluate(() => {
         return {

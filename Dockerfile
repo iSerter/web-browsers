@@ -64,6 +64,9 @@ RUN rm -rf ./node_modules && \
 # Copy rest of the app
 COPY . .
 
+# rename the .env.example file to .env
+RUN mv .env.example .env
+
 # Give app user access to all the project folders
 RUN chown -R app:app /home/app
 RUN chmod -R 777 /home/app
