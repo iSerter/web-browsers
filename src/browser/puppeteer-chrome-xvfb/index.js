@@ -3,6 +3,21 @@ const puppeteer = require("puppeteer-extra");
 const puppeteerStealth = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(puppeteerStealth());
 const proxyRouter = require("@extra/proxy-router");
+const fs = require('fs');
+const path = require('path');
+
+// Simple log helper that appends to a file and logs to console
+const LOG_FILE = process.env.PUPPETEER_LAUNCH_LOG || '/tmp/puppeteer-session.log';
+function logLine(msgObj) {
+  try {
+    const line = JSON.stringify({ ts: new Date().toISOString(), ...msgObj }) + '\n';
+    fs.appendFileSync(LOG_FILE, line);
+    // Also echo to console in structured form
+    console.log(line.trim());
+  } catch (e) {
+    console.error('Failed to write log line', e);
+  }
+}
 
 
 const stopSession = async (xvfbSession) => {
@@ -72,10 +87,20 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
         );
       }
 
-      console.log("Launching browser with the following configuration:");
-      console.log(`chromePath: ${chromePath}`);
-      console.log(`chromeFlags: ${chromeFlags.join(' ')}`);
-      console.log(`DISPLAY: ${xvfbSession._display}`);    
+      const dbusEnv = process.env.DBUS_SESSION_BUS_ADDRESS || null;
+      const dbusSocketGuess = dbusEnv && dbusEnv.startsWith('unix:path=') ? dbusEnv.replace('unix:path=','') : null;
+      const dbusSocketExists = dbusSocketGuess ? fs.existsSync(dbusSocketGuess) : false;
+      logLine({
+        event: 'launch.pre',
+        chromePath,
+        chromeFlags,
+        DISPLAY: xvfbSession._display,
+        dbusEnv,
+        dbusSocketGuess,
+        dbusSocketExists,
+        cwd: process.cwd(),
+        pid: process.pid,
+      });
 
       const browser = await puppeteer.launch({
         headless: false,
@@ -85,24 +110,32 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
         ignoreHTTPSErrors: true,
         devtools: false,
         timeout: 8000, // needed for strange bug. https://github.com/puppeteer/puppeteer/issues/10556#issuecomment-1681602191
+        // Merge existing env so we don't drop DBUS_SESSION_BUS_ADDRESS and others.
         env: {
-            DISPLAY: xvfbSession._display
+          ...process.env,
+          DISPLAY: xvfbSession._display,
         },
         // ignoreDefaultArgs: ['--disable-extensions'], // Disable file watcher
         ...customConfig,
       });
 
       browser.on("disconnected", () => {
-        console.log("Browser disconnected");
+        logLine({ event: 'browser.disconnected' });
         stopSession(xvfbSession);
       });
+
+      try {
+        logLine({ event: 'launch.post', wsEndpoint: browser.wsEndpoint() });
+      } catch (e) {
+        logLine({ event: 'launch.post.error', message: e.message });
+      }
 
       return resolve({
         browser,
         xvfbSession,
       });
     } catch (err) {
-      console.error(err);
+  logLine({ event: 'launch.error', message: err.message, stack: err.stack });
       throw new Error(err.message);
     }
   });

@@ -78,5 +78,15 @@ RUN chmod -R 777 /tmp
 EXPOSE 3030
 
 USER root
-# ENV DBUS_SESSION_BUS_ADDRESS autolaunch:
-CMD service dbus start && service redis-server start && sh ./util/start-x-screens.sh && pm2-runtime start ecosystem.config.js
+# Set runtime dir for manual DBus session bus
+ENV XDG_RUNTIME_DIR=/tmp/runtime-dbus
+RUN mkdir -p $XDG_RUNTIME_DIR && chmod 700 $XDG_RUNTIME_DIR
+
+# Pre-set (deterministic path) so child processes inherit even if they spawn before script export
+ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/runtime-dbus/bus
+
+# Copy startup script and use it as entrypoint
+COPY start-container.sh /usr/local/bin/start-container.sh
+RUN chmod +x /usr/local/bin/start-container.sh
+
+CMD ["/usr/local/bin/start-container.sh"]
