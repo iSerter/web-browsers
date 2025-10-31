@@ -63,3 +63,26 @@ dbus-send --system --dest=org.freedesktop.DBus --type=method_call --print-reply 
 
 - run the app with `app` user. (currently chrome is complaining about it)
 - implement proxies
+
+## Logging
+
+Puppeteer launcher writes structured JSON lines to `/tmp/puppeteer-session.log` (override with `PUPPETEER_LAUNCH_LOG`). Queue workers write to `/tmp/queue-workers.log` (override with `QUEUE_WORKERS_LOG_FILE`). All paths are forced under `/tmp/`.
+
+## Log Cleanup
+
+An hourly cleanup job (`log-cleaner` in `ecosystem.config.js`) deletes or truncates these debug logs.
+
+Env configuration:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_CLEAN_INTERVAL_MS` | `3600000` | Interval between clean runs (ms). |
+| `LOG_CLEAN_STRATEGY` | `delete` | `delete` removes files; `truncate` empties contents. |
+| `LOG_FILES` | (auto defaults) | Comma list of log files; relative coerced into `/tmp/`. |
+
+Example:
+```bash
+LOG_CLEAN_INTERVAL_MS=600000 LOG_CLEAN_STRATEGY=truncate LOG_FILES=puppeteer-session.log,queue-workers.log pm2 start ecosystem.config.js
+```
+
+Disable by removing the `log-cleaner` entry or setting a very large interval.

@@ -5,19 +5,12 @@ puppeteer.use(puppeteerStealth());
 const proxyRouter = require("@extra/proxy-router");
 const fs = require('fs');
 const path = require('path');
+const { buildLogger } = require('../../util/logger');
 
-// Simple log helper that appends to a file and logs to console
+// Initialize structured logger (always under /tmp)
 const LOG_FILE = process.env.PUPPETEER_LAUNCH_LOG || '/tmp/puppeteer-session.log';
-function logLine(msgObj) {
-  try {
-    const line = JSON.stringify({ ts: new Date().toISOString(), ...msgObj }) + '\n';
-    fs.appendFileSync(LOG_FILE, line);
-    // Also echo to console in structured form
-    console.log(line.trim());
-  } catch (e) {
-    console.error('Failed to write log line', e);
-  }
-}
+const logger = buildLogger({ filePath: LOG_FILE });
+const logLine = (o) => logger.write(o);
 
 
 const stopSession = async (xvfbSession) => {

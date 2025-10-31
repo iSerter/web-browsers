@@ -5,17 +5,53 @@ const bodyParser = require('body-parser');
 const WebRequestsQueue = require('./web-requests-queue');
 
 const app = express();
-const port = process.env.API_PORT || 3030;
+const port = Number(process.env.API_PORT) || 3030;
 const queue = new WebRequestsQueue(process.env.QUEUE_COUNT || 2);
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors());
 
-app.listen(port, async () => {
-  await queue.start();
-  console.log(`Server running on port ${port}`);
-});
+let server;
+const start = async () => {
+  try {
+    await queue.start();
+    server = app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${port} already in use. Another process is likely still running. Exiting.`);
+        process.exit(1);
+      } else {
+        console.error('Server error', err);
+      }
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
+start();
+
+const graceful = (signal) => {
+  console.log(`[graceful] ${signal} received. Shutting down.`);
+  if (server) {
+    server.close(() => {
+      console.log('[graceful] HTTP server closed');
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+  // Force exit if still not closed after 5s
+  setTimeout(() => {
+    console.warn('[graceful] Forcing exit after timeout');
+    process.exit(1);
+  }, 5000).unref();
+};
+['SIGTERM', 'SIGINT'].forEach(sig => process.on(sig, () => graceful(sig)));
 
 app.get("/", (req, res) => {
   res.send("API server is running");

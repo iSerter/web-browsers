@@ -5,19 +5,71 @@ class WebRequestsQueue {
 
   constructor(queueCount = 3) {
     this.queueCount = queueCount;
-    this.client = redis.createClient();
-    this.client.on('error', (err) => {
-      console.error('Redis error:', err);
+    this.client = null; // lazy init to allow recreation on disconnect
+    this.connectingPromise = null; // prevent duplicate concurrent connects
+  }
+
+  getRedisUrl() {
+    return process.env.REDIS_URL || undefined; // allow override via env
+  }
+
+  createClient() {
+    // Provide a reconnect strategy: exponential backoff capped at 5s
+    const url = this.getRedisUrl();
+    const client = redis.createClient({
+      url,
+      socket: {
+        reconnectStrategy: (retries) => {
+          const delay = Math.min(retries * 100, 5000);
+          console.warn(`[redis] Reconnect attempt #${retries}, delay ${delay}ms`);
+          return delay; // return number triggers retry; return error stops
+        }
+      }
     });
 
-
-    this.client.on('ready', () => {
-      console.log('Redis client connected');
+    client.on('error', (err) => {
+      console.error('[redis] Error:', err);
     });
+    client.on('ready', () => {
+      console.log('[redis] Client ready');
+    });
+    client.on('end', () => {
+      console.warn('[redis] Connection ended');
+    });
+    client.on('reconnecting', () => {
+      console.log('[redis] Reconnecting...');
+    });
+    return client;
+  }
+
+  async ensureClient() {
+    // If an existing open client, return immediately
+    if (this.client && this.client.isOpen) return this.client;
+
+    // If a connection attempt is in progress, await it
+    if (this.connectingPromise) {
+      await this.connectingPromise;
+      return this.client;
+    }
+
+    // Create a new client and connect
+    this.client = this.createClient();
+    this.connectingPromise = this.client.connect()
+      .catch(err => {
+        console.error('[redis] Failed to connect:', err);
+        // Reset client so future ensureClient attempts can retry
+        this.client = null;
+        throw err;
+      })
+      .finally(() => {
+        this.connectingPromise = null;
+      });
+    await this.connectingPromise;
+    return this.client;
   }
 
   async start() {
-    await this.client.connect();
+    await this.ensureClient();
   }
 
   getQueueName(queueNo = 1) {
@@ -36,11 +88,12 @@ class WebRequestsQueue {
     const queueNumber = this.getQueueNumberForRequest(requestId);
   
     try {
-      await this.client.lPush(this.getQueueName(queueNumber), requestId);
+      const client = await this.ensureClient();
+      await client.lPush(this.getQueueName(queueNumber), requestId);
   
       console.log('pushing request config to queue', JSON.stringify(request));
-      await this.client.hSet(requestId, 'config', JSON.stringify(request));
-      await this.client.hSet(requestId, 'status', 0);
+      await client.hSet(requestId, 'config', JSON.stringify(request));
+      await client.hSet(requestId, 'status', 0);
   
       return requestId;
     } catch (err) {
@@ -50,23 +103,26 @@ class WebRequestsQueue {
   }
 
   async updateRequestStatus(requestId, status) {
-    return this.client.hSet(requestId, 'status', status);
+    const client = await this.ensureClient();
+    return client.hSet(requestId, 'status', status);
   }
 
   async updateRequestResult(requestId, result) {
-    return this.client.hSet(requestId, 'result', JSON.stringify(result));
+    const client = await this.ensureClient();
+    return client.hSet(requestId, 'result', JSON.stringify(result));
   }
 
   async getRequests(queueNumber = 1) {
     try {
-      const requestIds = await this.client.lRange(this.getQueueName(queueNumber), 0, -1);
+      const client = await this.ensureClient();
+      const requestIds = await client.lRange(this.getQueueName(queueNumber), 0, -1);
 
       // console.log('read requestIds with lRange', requestIds);
   
       const requests = await Promise.all(requestIds.map(async (requestId) => {
-        const config = await this.client.hGet(requestId, 'config');
+        const config = await client.hGet(requestId, 'config');
         // console.log(`read ${requestId} config from redis`, config);
-        const status = await this.client.hGet(requestId, 'status');
+        const status = await client.hGet(requestId, 'status');
         // console.log(`read ${requestId} status from redis`, status);
         return { id: requestId, config: JSON.parse(config), status };
       }));
@@ -80,18 +136,21 @@ class WebRequestsQueue {
   }
 
   async getRequestStatus(requestId) {
-    return this.client.hGet(requestId, 'status');
+    const client = await this.ensureClient();
+    return client.hGet(requestId, 'status');
   }
 
   async getRequestResult(requestId) {
-    return this.client.hGet(requestId, 'result');
+    const client = await this.ensureClient();
+    return client.hGet(requestId, 'result');
   }
 
   async deleteRequest(requestId) {
-    await this.client.hDel(requestId, 'config');
-    await this.client.hDel(requestId, 'status');
-    await this.client.hDel(requestId, 'result');
-    await this.client.lRem(this.getQueueName(this.getQueueNumberForRequest(requestId)), 0, requestId); 
+    const client = await this.ensureClient();
+    await client.hDel(requestId, 'config');
+    await client.hDel(requestId, 'status');
+    await client.hDel(requestId, 'result');
+    await client.lRem(this.getQueueName(this.getQueueNumberForRequest(requestId)), 0, requestId); 
     return true;
   }
 }
