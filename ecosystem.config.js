@@ -2,8 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'api-server',
-      script: 'npm',
-      args: 'run start',
+      script: 'src/index.js',
       instances: 1,
       watch: false, // disable watch inside container to avoid duplicate restarts / EADDRINUSE
       max_restarts: 10,
@@ -15,8 +14,7 @@ module.exports = {
     },
     {
       name: 'queue-workers',
-      script: 'npm',
-      args: 'run start:workers',
+      script: 'src/queue-workers.js',
       instances: 1,
       watch: false,
       max_restarts: 10,
