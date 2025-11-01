@@ -91,6 +91,7 @@ app.post("/browse", authenticate, async (req, res) => {
   const headers = req.body.headers || [];
   const method = req.body.method || 'GET';
   const proxyCountryCode = req.body.proxy_country_code;
+  const randomize = req.body.randomize === 1 || req.body.randomize === '1' || req.body.randomize === true;
 
   // If proxy_country_code is specified, validate that a browser is available
   let queueNumber = null;
@@ -114,7 +115,7 @@ app.post("/browse", authenticate, async (req, res) => {
     }
   }
 
-  const request = { url, headers, method };
+  const request = { url, headers, method, randomize };
   const requestId = await queue.pushRequest(request, queueNumber);
 
   // wait 30 seconds for the request to be processed, check every 70ms

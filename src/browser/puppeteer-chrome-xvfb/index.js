@@ -38,7 +38,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
       try {
         xvfbSession = new Xvfb({
           silent: true,
-          xvfb_args: ["-screen", "0", "1920x1080x24", "-ac"],
+          xvfb_args: ["-screen", "0", "2560x1440x24", "-ac"],
         });
         xvfbSession.startSync();
       } catch (err) {

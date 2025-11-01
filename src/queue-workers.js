@@ -4,6 +4,7 @@ const WebRequestsQueue = require('./web-requests-queue.js');
 const { buildLogger } = require('./util/logger');
 const { getAvailableProxies } = require('./util/proxies');
 const Browsers = require('./util/browsers');
+const { randomizePuppeteerPage, savePageDefaults, restorePageDefaults } = require('./util/puppeteer-randomizer');
 
 // Initialize dedicated worker log file (can override via QUEUE_WORKERS_LOG_FILE)
 const WORKER_LOG_FILE = process.env.QUEUE_WORKERS_LOG_FILE || '/tmp/queue-workers.log';
@@ -91,9 +92,19 @@ const startQueueWorker = async (queueNumber, browser) => {
     for(let i=0; i<requests.length; i++) {
       const request = requests[i];
       const { id, config } = request;
-      const { url, headers, method } = config;
-      log('request.start', { queueNumber, id, url, method });
+      const { url, headers, method, randomize } = config;
+      log('request.start', { queueNumber, id, url, method, randomize: !!randomize });
+      
       const page = await browser.newPage();
+      
+      // Save defaults and apply randomization if requested
+      let pageDefaults = null;
+      if (randomize) {
+        pageDefaults = await savePageDefaults(page);
+        await randomizePuppeteerPage(page);
+        log('request.randomized', { queueNumber, id });
+      }
+      
       await page.setExtraHTTPHeaders(headers);
       await page.goto(url, { waitUntil: 'domcontentloaded' });
       await page.evaluate(() => {
@@ -117,6 +128,13 @@ const startQueueWorker = async (queueNumber, browser) => {
       });
       await queue.updateRequestResult(id, result);
       await queue.updateRequestStatus(id, 1);
+      
+      // Restore defaults if randomization was applied
+      if (randomize && pageDefaults) {
+        await restorePageDefaults(page, pageDefaults);
+        log('request.restored', { queueNumber, id });
+      }
+      
       await page.close();
       log('request.complete', { queueNumber, id, title: result.title, htmlBytes: result.html.length });
     }
