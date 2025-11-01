@@ -1,7 +1,7 @@
 require('dotenv').config();
 const WebRequestsQueue = require('./src/web-requests-queue.js');
 
-const queueCount = process.env.QUEUE_COUNT || 2;
+const queueCount = process.env.BROWSER_COUNT || 2;
 const queue = new WebRequestsQueue(queueCount);
 
 const debugQueue = async (queue) => {

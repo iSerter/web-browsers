@@ -32,7 +32,7 @@ const authenticate = (req, res, next) => {
   next();
 };
 const port = Number(process.env.API_PORT) || 3030;
-const queue = new WebRequestsQueue(process.env.QUEUE_COUNT || 2);
+const queue = new WebRequestsQueue(process.env.BROWSER_COUNT || 2);
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));

@@ -8,7 +8,7 @@ const WORKER_LOG_FILE = process.env.QUEUE_WORKERS_LOG_FILE || '/tmp/queue-worker
 const workerLogger = buildLogger({ filePath: WORKER_LOG_FILE });
 const log = (event, extra = {}) => workerLogger.write({ event, ...extra });
 
-const queueCount = process.env.QUEUE_COUNT || 2;
+const queueCount = process.env.BROWSER_COUNT || 2;
 const queue = new WebRequestsQueue(queueCount);
 
 let workerContexts = [];
