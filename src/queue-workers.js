@@ -1,31 +1,74 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const { startSession, stopSession } = require('./browser/puppeteer-chrome-xvfb/index.js');
 const WebRequestsQueue = require('./web-requests-queue.js');
 const { buildLogger } = require('./util/logger');
+const { getAvailableProxies } = require('./util/proxies');
 
 // Initialize dedicated worker log file (can override via QUEUE_WORKERS_LOG_FILE)
 const WORKER_LOG_FILE = process.env.QUEUE_WORKERS_LOG_FILE || '/tmp/queue-workers.log';
 const workerLogger = buildLogger({ filePath: WORKER_LOG_FILE });
 const log = (event, extra = {}) => workerLogger.write({ event, ...extra });
 
-const queueCount = process.env.BROWSER_COUNT || 2;
-const queue = new WebRequestsQueue(queueCount);
+const browserCount = process.env.BROWSER_COUNT || 2;
+const queue = new WebRequestsQueue(browserCount);
+
+const proxies = getAvailableProxies();
+const browsers = [];
+let proxyPointer = 0;
 
 let workerContexts = [];
 const runQueueWorkers = async () => {
   await queue.start();
-  log('queue.start', { queueCount });
-  const proxy = process.env.PROXY_DEFAULT;
-  for (let i = 1; i <= queueCount; i++) {
+  log('queue.start', { queueCount: browserCount, availableProxies: proxies.length });
+  
+  for (let i = 1; i <= browserCount; i++) {
     try {
+      // Pick proxy for this browser
+      let proxy = process.env.PROXY_DEFAULT;
+      let countryCode = '';
+      
+      if (proxies.length > 0) {
+        const selectedProxy = proxies[proxyPointer];
+        proxy = selectedProxy.proxy;
+        countryCode = selectedProxy.countryCode;
+        // Move proxy pointer for next iteration
+        proxyPointer = (proxyPointer + 1) % proxies.length;
+      }
+      
       const { browser, xvfbSession } = await startSession({ proxy });
-      log('worker.bootstrap.success', { queueNumber: i, wsEndpoint: browser.wsEndpoint(), display: xvfbSession.display });
+      log('worker.bootstrap.success', { 
+        queueNumber: i, 
+        wsEndpoint: browser.wsEndpoint(), 
+        display: xvfbSession.display,
+        countryCode: countryCode
+      });
+      
       startQueueWorker(i, browser);
       workerContexts.push({ queueNumber: i, browser, xvfbSession });
+      
+      // Add browser info to browsers array
+      browsers.push({
+        queueNumber: i,
+        countryCode: countryCode,
+        wsEndpoint: browser.wsEndpoint(),
+        display: xvfbSession.display
+      });
     } catch (err) {
       log('worker.bootstrap.error', { queueNumber: i, message: err.message, stack: err.stack });
     }
   }
+  
+  // Write browsers array to runtime/browsers.json
+  const runtimeDir = path.join(__dirname, '..', 'runtime');
+  if (!fs.existsSync(runtimeDir)) {
+    fs.mkdirSync(runtimeDir, { recursive: true });
+  }
+  
+  const browsersJsonPath = path.join(runtimeDir, 'browsers.json');
+  fs.writeFileSync(browsersJsonPath, JSON.stringify(browsers, null, 2));
+  log('browsers.json.written', { path: browsersJsonPath, count: browsers.length });
 };
 runQueueWorkers();
 
