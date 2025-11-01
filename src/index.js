@@ -2,9 +2,35 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
 const WebRequestsQueue = require('./web-requests-queue');
 
 const app = express();
+
+// Load access keys
+const accessKeysPath = path.join(__dirname, '..', 'accessKeys.json');
+const accessKeys = JSON.parse(fs.readFileSync(accessKeysPath, 'utf8'));
+
+// Authentication middleware
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({ code: 401, message: 'Authorization header required' });
+  }
+  
+  // Support both "Bearer <token>" and "<token>" formats
+  const token = authHeader.startsWith('Bearer ') 
+    ? authHeader.substring(7) 
+    : authHeader;
+  
+  if (!accessKeys.validKeys.includes(token)) {
+    return res.status(403).json({ code: 403, message: 'Invalid access key' });
+  }
+  
+  next();
+};
 const port = Number(process.env.API_PORT) || 3030;
 const queue = new WebRequestsQueue(process.env.QUEUE_COUNT || 2);
 
@@ -57,7 +83,7 @@ app.get("/", (req, res) => {
   res.send("API server is running");
 });
 
-app.post("/browse", async (req, res) => {
+app.post("/browse", authenticate, async (req, res) => {
   console.log(req.body);
   const url = req.body.url;
   const headers = req.body.headers || [];

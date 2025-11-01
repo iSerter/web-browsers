@@ -33,7 +33,10 @@ depending on your host system.
 ## Use 
 
 ```sh
-curl -X POST http://127.0.0.1:3030/browse -H "Content-Type: application/json" -d '{"url": "https://iserter.com/"}'
+curl -X POST http://localhost:3030/browse \
+  -H "Authorization: Bearer iserter-sample-access-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://iserter.com"}'
 ```
 
 For a quick verification of the API server's availability: `curl http://127.0.0.1:3030/`
