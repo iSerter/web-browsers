@@ -82,10 +82,14 @@ class WebRequestsQueue {
     return lastCharNumber % this.queueCount + 1;
   }
 
-  async pushRequest(request) {
+  async pushRequest(request, specificQueueNumber = null) {
     const reqHashId = crypto.createHash('md5').update(JSON.stringify(request)).digest('hex');
     const requestId = `request:${Date.now()}:${reqHashId}`;
-    const queueNumber = this.getQueueNumberForRequest(requestId);
+    
+    // Use specific queue number if provided, otherwise calculate from requestId
+    const queueNumber = specificQueueNumber !== null 
+      ? specificQueueNumber 
+      : this.getQueueNumberForRequest(requestId);
   
     try {
       const client = await this.ensureClient();
@@ -94,6 +98,7 @@ class WebRequestsQueue {
       console.log('pushing request config to queue', JSON.stringify(request));
       await client.hSet(requestId, 'config', JSON.stringify(request));
       await client.hSet(requestId, 'status', 0);
+      await client.hSet(requestId, 'queueNumber', queueNumber);
   
       return requestId;
     } catch (err) {
@@ -147,10 +152,18 @@ class WebRequestsQueue {
 
   async deleteRequest(requestId) {
     const client = await this.ensureClient();
+    
+    // Try to get the stored queue number, fallback to calculated
+    let queueNumber = await client.hGet(requestId, 'queueNumber');
+    if (!queueNumber) {
+      queueNumber = this.getQueueNumberForRequest(requestId);
+    }
+    
     await client.hDel(requestId, 'config');
     await client.hDel(requestId, 'status');
     await client.hDel(requestId, 'result');
-    await client.lRem(this.getQueueName(this.getQueueNumberForRequest(requestId)), 0, requestId); 
+    await client.hDel(requestId, 'queueNumber');
+    await client.lRem(this.getQueueName(queueNumber), 0, requestId); 
     return true;
   }
 }

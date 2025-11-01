@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const WebRequestsQueue = require('./web-requests-queue');
+const Browsers = require('./util/browsers');
 
 const app = express();
 
@@ -33,6 +34,7 @@ const authenticate = (req, res, next) => {
 };
 const port = Number(process.env.API_PORT) || 3030;
 const queue = new WebRequestsQueue(process.env.BROWSER_COUNT || 2);
+const browsers = new Browsers();
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
@@ -88,8 +90,32 @@ app.post("/browse", authenticate, async (req, res) => {
   const url = req.body.url;
   const headers = req.body.headers || [];
   const method = req.body.method || 'GET';
+  const proxyCountryCode = req.body.proxy_country_code;
+
+  // If proxy_country_code is specified, validate that a browser is available
+  let queueNumber = null;
+  if (proxyCountryCode) {
+    try {
+      queueNumber = browsers.getQueueNumberByCountryCode(proxyCountryCode);
+      
+      if (queueNumber === null) {
+        const availableCodes = browsers.getAvailableCountryCodes();
+        return res.status(400).json({ 
+          code: 400, 
+          message: `No browser available for country code: ${proxyCountryCode}`,
+          availableCountryCodes: availableCodes
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({ 
+        code: 500, 
+        message: err.message
+      });
+    }
+  }
+
   const request = { url, headers, method };
-  const requestId = await queue.pushRequest(request);
+  const requestId = await queue.pushRequest(request, queueNumber);
 
   // wait 30 seconds for the request to be processed, check every 70ms
   let status = 0;

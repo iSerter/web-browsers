@@ -1,10 +1,9 @@
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
 const { startSession, stopSession } = require('./browser/puppeteer-chrome-xvfb/index.js');
 const WebRequestsQueue = require('./web-requests-queue.js');
 const { buildLogger } = require('./util/logger');
 const { getAvailableProxies } = require('./util/proxies');
+const Browsers = require('./util/browsers');
 
 // Initialize dedicated worker log file (can override via QUEUE_WORKERS_LOG_FILE)
 const WORKER_LOG_FILE = process.env.QUEUE_WORKERS_LOG_FILE || '/tmp/queue-workers.log';
@@ -15,6 +14,7 @@ const browserCount = process.env.BROWSER_COUNT || 2;
 const queue = new WebRequestsQueue(browserCount);
 
 const proxies = getAvailableProxies();
+const browsersUtil = new Browsers();
 const browsers = [];
 let proxyPointer = 0;
 
@@ -59,15 +59,9 @@ const runQueueWorkers = async () => {
       log('worker.bootstrap.error', { queueNumber: i, message: err.message, stack: err.stack });
     }
   }
-  
-  // Write browsers array to runtime/browsers.json
-  const runtimeDir = path.join(__dirname, '..', 'runtime');
-  if (!fs.existsSync(runtimeDir)) {
-    fs.mkdirSync(runtimeDir, { recursive: true });
-  }
-  
-  const browsersJsonPath = path.join(runtimeDir, 'browsers.json');
-  fs.writeFileSync(browsersJsonPath, JSON.stringify(browsers, null, 2));
+
+  // Write browsers array to browsers.json using the Browsers utility
+  const browsersJsonPath = browsersUtil.writeBrowsersFile(browsers);
   log('browsers.json.written', { path: browsersJsonPath, count: browsers.length });
 };
 runQueueWorkers();

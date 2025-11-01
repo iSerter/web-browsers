@@ -1,4 +1,7 @@
 # Dockerized Web Browsers [WIP]
+
+Yes, it's dirty, but it works.
+
 A basic setup for my web browser experiments. Starting with Puppeteer first.
 - `queue-workers.js` runs multiple browsers with a dedicated `xvfb` display for each.
 - - With `xvfb` sessions, we can launch `headless:false` chrome instances
