@@ -56,6 +56,9 @@ dbus-monitor --system
 dbus-send --system --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames
 ```
 
+# Copy .env and restart all apps
+docker cp .env wb-app:/home/app/.env && \
+docker exec wb-app pm2 restart all
 
 
 
