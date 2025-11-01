@@ -34,7 +34,10 @@ services:
     restart: unless-stopped
     networks:
       - web-browsers-network
+      - sg-network
 
 networks:
   web-browsers-network:
     driver: bridge
+  sg-network:
+    external: true

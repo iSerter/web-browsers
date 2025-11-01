@@ -20,7 +20,7 @@ function resolveLogFiles() {
   const envList = process.env.LOG_FILES;
   if (!envList) {
     // default known files
-    return ['/tmp/puppeteer-session.log', '/tmp/queue-workers.log'];
+    return ['/tmp/puppeteer-session.log', '/tmp/queue-workers.log', '/tmp/web-requests-queue.log'];
   }
   return envList.split(',').map(f => {
     f = f.trim();

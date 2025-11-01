@@ -1,5 +1,11 @@
 const redis = require('redis');
 const crypto = require('crypto');
+const { buildLogger } = require('./util/logger');
+
+// Initialize dedicated queue log file (can override via WEB_REQUESTS_QUEUE_LOG_FILE)
+const QUEUE_LOG_FILE = process.env.WEB_REQUESTS_QUEUE_LOG_FILE || '/tmp/web-requests-queue.log';
+const queueLogger = buildLogger({ filePath: QUEUE_LOG_FILE });
+const log = (event, extra = {}) => queueLogger.write({ event, ...extra });
 
 class WebRequestsQueue {
 
@@ -28,15 +34,19 @@ class WebRequestsQueue {
     });
 
     client.on('error', (err) => {
+      log('redis.error', { message: err.message, stack: err.stack });
       console.error('[redis] Error:', err);
     });
     client.on('ready', () => {
+      log('redis.ready', { url });
       console.log('[redis] Client ready');
     });
     client.on('end', () => {
+      log('redis.end');
       console.warn('[redis] Connection ended');
     });
     client.on('reconnecting', () => {
+      log('redis.reconnecting');
       console.log('[redis] Reconnecting...');
     });
     return client;
@@ -56,6 +66,7 @@ class WebRequestsQueue {
     this.client = this.createClient();
     this.connectingPromise = this.client.connect()
       .catch(err => {
+        log('redis.connect.error', { message: err.message, stack: err.stack });
         console.error('[redis] Failed to connect:', err);
         // Reset client so future ensureClient attempts can retry
         this.client = null;
@@ -65,11 +76,13 @@ class WebRequestsQueue {
         this.connectingPromise = null;
       });
     await this.connectingPromise;
+    log('redis.connect.success');
     return this.client;
   }
 
   async start() {
     await this.ensureClient();
+    log('queue.start', { queueCount: this.queueCount });
   }
 
   getQueueName(queueNo = 1) {
@@ -95,28 +108,35 @@ class WebRequestsQueue {
       const client = await this.ensureClient();
       await client.lPush(this.getQueueName(queueNumber), requestId);
   
-      console.log('pushing request config to queue', JSON.stringify(request));
       await client.hSet(requestId, 'config', JSON.stringify(request));
       await client.hSet(requestId, 'status', 0);
       await client.hSet(requestId, 'queueNumber', queueNumber);
   
+      log('request.push', { requestId, queueNumber, url: request.url, method: request.method });
+      console.log('pushing request config to queue', JSON.stringify(request));
+  
       return requestId;
     } catch (err) {
-        console.error(err);
+      log('request.push.error', { message: err.message, stack: err.stack });
+      console.error(err);
       throw err;
     }
   }
 
   async updateRequestStatus(requestId, status) {
     const client = await this.ensureClient();
+    log('request.status.update', { requestId, status });
     return client.hSet(requestId, 'status', status);
   }
 
   async updateRequestResult(requestId, result) {
     const client = await this.ensureClient();
-    return client.hSet(requestId, 'result', JSON.stringify(result));
+    const resultStr = JSON.stringify(result);
+    log('request.result.update', { requestId, resultBytes: resultStr.length });
+    return client.hSet(requestId, 'result', resultStr);
   }
 
+  // this function is called repeatedly. do not log inside unless debugging.
   async getRequests(queueNumber = 1) {
     try {
       const client = await this.ensureClient();
@@ -133,9 +153,11 @@ class WebRequestsQueue {
       }));
 
       // console.log('final requests array', requests);
+      //log('requests.get', { queueNumber, count: requests.length });
   
       return requests;
     } catch (err) {
+      //log('requests.get.error', { queueNumber, message: err.message, stack: err.stack });
       throw err;
     }
   }
@@ -163,7 +185,9 @@ class WebRequestsQueue {
     await client.hDel(requestId, 'status');
     await client.hDel(requestId, 'result');
     await client.hDel(requestId, 'queueNumber');
-    await client.lRem(this.getQueueName(queueNumber), 0, requestId); 
+    await client.lRem(this.getQueueName(queueNumber), 0, requestId);
+    
+    log('request.delete', { requestId, queueNumber });
     return true;
   }
 }

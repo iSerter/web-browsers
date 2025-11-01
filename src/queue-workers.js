@@ -96,6 +96,8 @@ const startQueueWorker = async (queueNumber, browser) => {
       log('request.start', { queueNumber, id, url, method, randomize: !!randomize });
       
       const page = await browser.newPage();
+
+      log('request.page.created', { queueNumber, id });
       
       // Save defaults and apply randomization if requested
       let pageDefaults = null;
@@ -126,6 +128,7 @@ const startQueueWorker = async (queueNumber, browser) => {
           html: document.documentElement.outerHTML
         };
       });
+      log('request.page.evaluated', { queueNumber, id, title: result.title, htmlBytes: result.html.length });
       await queue.updateRequestResult(id, result);
       await queue.updateRequestStatus(id, 1);
       

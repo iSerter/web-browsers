@@ -20,7 +20,7 @@ docker build -t iserter/web-browsers .
 
 ```bash
 docker build -t iserter/web-browsers:latest .
-docker build -t iserter/web-browsers:v0.0.1 .
+docker build -t iserter/web-browsers:v0.0.2 .
 ```
 
 ### Build with build arguments (if needed)
@@ -72,7 +72,7 @@ If you built without the registry prefix, tag it:
 
 ```bash
 docker tag web-browsers iserter/web-browsers:latest
-docker tag web-browsers iserter/web-browsers:v0.0.1
+docker tag web-browsers iserter/web-browsers:v0.0.2
 ```
 
 ### Push to Docker Hub
@@ -86,7 +86,7 @@ docker push iserter/web-browsers:latest
 #### Push specific version
 
 ```bash
-docker push iserter/web-browsers:v0.0.1
+docker push iserter/web-browsers:v0.0.2
 ```
 
 #### Push all tags
@@ -122,7 +122,7 @@ Here's a complete workflow for building and publishing:
 
 ```bash
 # 1. Build the image with proper tag
-docker build -t iserter/web-browsers:latest -t iserter/web-browsers:v1.0.0 .
+docker build -t iserter/web-browsers:latest -t iserter/web-browsers:v0.0.2 .
 
 # 2. Test the image locally
 docker run -d -p 3030:3030 --name wb-test iserter/web-browsers:latest

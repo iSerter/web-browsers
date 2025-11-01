@@ -93,6 +93,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
         dbusSocketExists,
         cwd: process.cwd(),
         pid: process.pid,
+        proxy,
       });
 
       const browser = await puppeteer.launch({

@@ -39,7 +39,7 @@ depending on your host system.
 curl -X POST http://localhost:3030/browse \
   -H "Authorization: Bearer iserter-sample-access-key" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://iserter.com"}'
+  -d '{"url": "https://iserter.com", "proxy_country_code": "DE"}'
 ```
 
 For a quick verification of the API server's availability: `curl http://127.0.0.1:3030/`
