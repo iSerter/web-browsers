@@ -1,37 +1,40 @@
 version: '3.8'
 
 services:
-  app:
+  web-browsers:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: my-web-browsers
-    platform: linux/amd64
-    volumes:
-      - .:/home/app
+    container_name: web-browsers-app
     ports:
       - "3030:3030"
     environment:
+      - NODE_ENV=production
       - LANG=en_US.UTF-8
-    command: >
-      sh -c "service dbus start && service redis-server start && sh ./util/start-x-screens.sh && su - app -c 'npm install && pm2-runtime start ecosystem.config.js'"
-    profiles:
-      - debian
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+      - XDG_CONFIG_HOME=/tmp/.chromium-config
+      - XDG_CACHE_HOME=/tmp/.chromium-cache
+      - XDG_RUNTIME_DIR=/tmp/runtime-dbus
+      - DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/runtime-dbus/bus
+    volumes:
+      # Mount application code for development (optional - comment out for production)
+      - ./src:/home/app/src
+      - ./util:/home/app/util
+      - ./logs:/home/app/logs
+      # Share /dev/shm to prevent Chrome crashes
+      - /dev/shm:/dev/shm
+    shm_size: '2gb'
+    # Required for Chrome to run properly
+    cap_add:
+      - SYS_ADMIN
+    # Security options for Chrome sandbox
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped
+    networks:
+      - web-browsers-network
 
-  node16-chromium:
-    build:
-      context: .
-      dockerfile: ./docker/node16-chromium/Dockerfile
-    container_name: my-web-browsers-node16-chromium
-    platform: linux/arm64
-    volumes:
-      - .:/home/app
-    ports:
-      - "3030:3030"
-    environment:
-      - LANG=en_US.UTF-8
-    command: >
-      sh -c "service dbus start && service redis-server start && su - app -c 'npm install && pm2-runtime start ecosystem.config.js'"
-    profiles:
-      - default
-      - macos
+networks:
+  web-browsers-network:
+    driver: bridge
