@@ -24,6 +24,8 @@ services:
       - ./logs:/home/app/logs
       # Share /dev/shm to prevent Chrome crashes
       - /dev/shm:/dev/shm
+      # Copy .env file into container, overwriting any existing one
+      - ./.env:/home/app/.env
     shm_size: '2gb'
     # Required for Chrome to run properly
     cap_add:
