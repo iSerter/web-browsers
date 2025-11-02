@@ -92,17 +92,24 @@ const startQueueWorker = async (queueNumber, browser) => {
     for(let i=0; i<requests.length; i++) {
       const request = requests[i];
       const { id, config } = request;
-      const { url, headers, method, randomize } = config;
-      log('request.start', { queueNumber, id, url, method, randomize: !!randomize });
+      const { url, headers, method, randomize, type = 'browse', viewport } = config;
+      log('request.start', { queueNumber, id, url, method, type, randomize: !!randomize });
       
       const page = await browser.newPage();
 
       log('request.page.created', { queueNumber, id });
       
+      // Set viewport if provided (for screenshot requests)
+      if (viewport && viewport.width && viewport.height) {
+        await page.setViewport({
+          width: viewport.width,
+          height: viewport.height
+        });
+        log('request.viewport.set', { queueNumber, id, viewport });
+      }
+      
       // Save defaults and apply randomization if requested
-      let pageDefaults = null;
       if (randomize) {
-        pageDefaults = await savePageDefaults(page);
         await randomizePuppeteerPage(page);
         log('request.randomized', { queueNumber, id });
       }
@@ -122,24 +129,36 @@ const startQueueWorker = async (queueNumber, browser) => {
       // wait 50ms
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const result = await page.evaluate(() => {
-        return {
-          title: document.title,
-          html: document.documentElement.outerHTML
+      let result;
+      if (type === 'screenshot') {
+        // Take screenshot and return as base64
+        const screenshot = await page.screenshot({ 
+          encoding: 'base64',
+          fullPage: false
+        });
+        const pageTitle = await page.title();
+        result = {
+          title: pageTitle,
+          screenshot: screenshot,
+          viewport: viewport || { width: 1920, height: 1080 }
         };
-      });
-      log('request.page.evaluated', { queueNumber, id, title: result.title, htmlBytes: result.html.length });
+        log('request.screenshot.captured', { queueNumber, id, title: pageTitle, screenshotBytes: screenshot.length });
+      } else {
+        // Default browse behavior - return HTML
+        result = await page.evaluate(() => {
+          return {
+            title: document.title,
+            html: document.documentElement.outerHTML
+          };
+        });
+        log('request.page.evaluated', { queueNumber, id, title: result.title, htmlBytes: result.html.length });
+      }
+      
       await queue.updateRequestResult(id, result);
       await queue.updateRequestStatus(id, 1);
       
-      // Restore defaults if randomization was applied
-      if (randomize && pageDefaults) {
-        await restorePageDefaults(page, pageDefaults);
-        log('request.restored', { queueNumber, id });
-      }
-      
       await page.close();
-      log('request.complete', { queueNumber, id, title: result.title, htmlBytes: result.html.length });
+      log('request.complete', { queueNumber, id, type });
     }
     // wait 70ms 
     await new Promise((resolve) => setTimeout(resolve, 70));

@@ -223,3 +223,11 @@ docker build --no-cache -t iserter/web-browsers .
 ```bash
 docker build --progress=plain -t iserter/web-browsers .
 ```
+
+### SG setup
+
+
+```
+docker network create sg-network
+docker network connect sg-network iserter.web-browsers
+```

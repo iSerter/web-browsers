@@ -66,7 +66,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
         "--ignore-certificate-errors",
         "--ignore-certificate-errors-spki-list",
         "--disable-extensions",
-        "--window-size=1920,1080",
+        "--window-size=2560,1440",
         `--crash-dumps-dir=${crashDumpsDir}`,
       ].concat(args);
 

@@ -35,12 +35,72 @@ depending on your host system.
 
 ## Use 
 
+### Browse endpoint
+
+Fetches a webpage and returns the HTML content:
+
 ```sh
 curl -X POST http://localhost:3030/browse \
   -H "Authorization: Bearer iserter-sample-access-key" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://iserter.com", "proxy_country_code": "DE"}'
 ```
+
+### Screenshot endpoint
+
+Captures a screenshot of a webpage and returns it as base64:
+
+```sh
+# Using custom viewport dimensions
+curl -X POST http://localhost:3030/screenshot \
+  -H "Authorization: Bearer iserter-sample-access-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://iserter.com", "viewport": {"width": 1920, "height": 1080}, "proxy_country_code": "DE"}'
+
+# Using viewport preset
+curl -X POST http://localhost:3030/screenshot \
+  -H "Authorization: Bearer iserter-sample-access-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://iserter.com", "viewport": "iphone-14-pro", "proxy_country_code": "DE"}'
+```
+
+#### Available Viewport Presets
+
+**Mobile:**
+- `iphone-se` (375×667)
+- `iphone-12` (390×844)
+- `iphone-14-pro` (393×852)
+- `iphone-14-pro-max` (430×932)
+- `pixel-5` (393×851)
+- `samsung-s20` (360×800)
+- `samsung-s21` (384×854)
+
+**Tablet:**
+- `ipad-mini` (768×1024)
+- `ipad-air` (820×1180)
+- `ipad-pro-11` (834×1194)
+- `ipad-pro-12.9` (1024×1366)
+- `surface-pro-7` (912×1368)
+
+**Desktop:**
+- `laptop` (1366×768)
+- `desktop` (1920×1080)
+- `desktop-4k` (3840×2160)
+- `macbook-air` (1440×900)
+- `macbook-pro-13` (2560×1600)
+- `macbook-pro-16` (3072×1920)
+
+#### Endpoint Options
+
+Both endpoints support the following options:
+- `url` (required): The URL to visit
+- `headers` (optional): Array of HTTP headers to send
+- `method` (optional): HTTP method, defaults to 'GET'
+- `proxy_country_code` (optional): Country code for proxy selection
+- `randomize` (optional): Enable browser fingerprint randomization (true/false/1/0)
+- `viewport` or `windowsize` (optional, screenshot only): 
+  - Object with `width` and `height` properties (e.g., `{"width": 1920, "height": 1080}`)
+  - String preset name (e.g., `"iphone-14-pro"`, `"desktop"`)
 
 For a quick verification of the API server's availability: `curl http://127.0.0.1:3030/`
 
