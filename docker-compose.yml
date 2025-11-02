@@ -26,6 +26,7 @@ services:
       - /dev/shm:/dev/shm
       # Copy .env file into container, overwriting any existing one
       - ./.env:/home/app/.env
+      - ./accessKeys.json:/home/app/accessKeys.json
     shm_size: '2gb'
     # Required for Chrome to run properly
     cap_add:

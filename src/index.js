@@ -176,6 +176,7 @@ app.post("/screenshot", authenticate, async (req, res) => {
   const method = req.body.method || 'GET';
   const proxyCountryCode = req.body.proxy_country_code;
   const randomize = req.body.randomize === 1 || req.body.randomize === '1' || req.body.randomize === true;
+  const waitMilliseconds = parseInt(req.body.wait_ms) || 500;
   
   // Parse viewport/windowsize options
   let viewportInput = req.body.viewport || req.body.windowsize;
@@ -229,7 +230,8 @@ app.post("/screenshot", authenticate, async (req, res) => {
     method, 
     randomize, 
     type: 'screenshot',
-    viewport: { width, height }
+    viewport: { width, height },
+    waitMilliseconds
   };
   const requestId = await queue.pushRequest(request, queueNumber);
 

@@ -92,7 +92,7 @@ const startQueueWorker = async (queueNumber, browser) => {
     for(let i=0; i<requests.length; i++) {
       const request = requests[i];
       const { id, config } = request;
-      const { url, headers, method, randomize, type = 'browse', viewport } = config;
+      const { url, headers, method, randomize, type = 'browse', viewport, waitMilliseconds } = config;
       log('request.start', { queueNumber, id, url, method, type, randomize: !!randomize });
       
       const page = await browser.newPage();
@@ -126,11 +126,14 @@ const startQueueWorker = async (queueNumber, browser) => {
       await page.evaluate(() => {
         window.scrollTo(0, 0);
       });
-      // wait 50ms
-      await new Promise((resolve) => setTimeout(resolve, 50));
 
       let result;
       if (type === 'screenshot') {
+
+        // Wait before taking screenshot (default 500ms if not specified)
+        const waitTime = waitMilliseconds || 500;
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+
         // Take screenshot and return as base64
         const screenshot = await page.screenshot({ 
           encoding: 'base64',
@@ -140,10 +143,15 @@ const startQueueWorker = async (queueNumber, browser) => {
         result = {
           title: pageTitle,
           screenshot: screenshot,
+          imageType: 'base64-encoded-png',
+          instructions: "The screenshot is returned as a base64-encoded PNG image in the 'screenshot' field. To view or save the image, decode the base64 string accordingly.",
           viewport: viewport || { width: 1920, height: 1080 }
         };
         log('request.screenshot.captured', { queueNumber, id, title: pageTitle, screenshotBytes: screenshot.length });
       } else {
+        // wait 50ms
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         // Default browse behavior - return HTML
         result = await page.evaluate(() => {
           return {

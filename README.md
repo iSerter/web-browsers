@@ -12,28 +12,13 @@ A basic setup for my web browser experiments. Starting with Puppeteer first.
 
 ## Setup
 
-### Create image 
-```
-docker build -t web-browsers .
-```
-
-### Launch a container
-```
-docker run -d -p 3030:3030 --name wb-app web-browsers
-```
-
-### via docker-compose (WIP)
-
 ```sh
-docker compose --profile debian up
+docker compose up
 ```
- or 
-```sh
-docker compose --profile macos up
-``` 
-depending on your host system.
 
 ## Use 
+
+Check the API server's availability: `curl http://127.0.0.1:3030/`
 
 ### Browse endpoint
 
@@ -43,7 +28,7 @@ Fetches a webpage and returns the HTML content:
 curl -X POST http://localhost:3030/browse \
   -H "Authorization: Bearer iserter-sample-access-key" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://iserter.com", "proxy_country_code": "DE"}'
+  -d '{"url": "https://iserter.com"}'
 ```
 
 ### Screenshot endpoint
@@ -61,7 +46,7 @@ curl -X POST http://localhost:3030/screenshot \
 curl -X POST http://localhost:3030/screenshot \
   -H "Authorization: Bearer iserter-sample-access-key" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://iserter.com", "viewport": "iphone-14-pro", "proxy_country_code": "DE"}'
+  -d '{"url": "https://iserter.com", "viewport": "iphone-14-pro", "proxy_country_code": "DE", "wait_ms":2000}'
 ```
 
 #### Available Viewport Presets
