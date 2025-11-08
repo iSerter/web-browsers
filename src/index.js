@@ -12,15 +12,47 @@ const app = express();
 // Common viewport presets
 const VIEWPORT_PRESETS = {
   // Mobile
-  'iphone-se': { width: 375, height: 667 },
-  'iphone-12': { width: 390, height: 844 },
-  'iphone-14-pro': { width: 393, height: 852 },
-  'iphone-14-pro-max': { width: 430, height: 932 },
-  'pixel-5': { width: 393, height: 851 },
-  'samsung-s20': { width: 360, height: 800 },
-  'samsung-s21': { width: 384, height: 854 },
+  'mobile':     { width: 375, height: 667 },
+  'mobile-xs':  { width: 320, height: 568 },
+  'mobile-sm':  { width: 360, height: 640 },
+  'mobile-md':  { width: 375, height: 667 },
+  'mobile-lg':  { width: 414, height: 896 },
+  'mobile-xl':  { width: 430, height: 932 },
 
   // Tablet
+  'tablet':     { width: 768, height: 1024 },
+  'tablet-sm':  { width: 600, height: 960 },
+  'tablet-md':  { width: 768, height: 1024 },
+  'tablet-lg':  { width: 834, height: 1194 },
+  'tablet-xl':  { width: 1024, height: 1366 },
+
+  // Laptop / small desktop
+  'desktop':    { width: 1920, height: 1080 },
+  'desktop-sm': { width: 1280, height: 800 },
+  'desktop-md': { width: 1366, height: 768 },
+  'desktop-lg': { width: 1440, height: 900 },
+  // Large desktop / ultra-wide
+  'desktop-xl': { width: 1920, height: 1080 },
+  'desktop-2xl':{ width: 2560, height: 1440 },
+  'desktop-4k': { width: 3840, height: 2160 },
+
+  // Specific Mobile Devices
+  'iphone-15':          { width: 393, height: 852 },  // confirmed by table for iPhone 15. :contentReference[oaicite:4]{index=4}
+  'iphone-15-plus':     { width: 430, height: 932 },  // matched logic for “Plus” size. :contentReference[oaicite:5]{index=5}
+  'iphone-16':          { width: 393, height: 852 },  // verified from iOS-Resolution table. :contentReference[oaicite:6]{index=6}
+  'iphone-16-plus':     { width: 430, height: 932 },  // verified from iOS-Resolution table. :contentReference[oaicite:7]{index=7}
+  'iphone-16-pro':      { width: 402, height: 874 },  // verified from iOS-Resolution. :contentReference[oaicite:8]{index=8}
+  'iphone-16-pro-max':  { width: 440, height: 956 },  // verified from iOS-Resolution. :contentReference[oaicite:9]{index=9}
+  'iphone-17':          { width: 402, height: 874 },  // **updated** based on logic & mapping from specs/resolution. Source: specs show 1206×2622 pixels for iPhone 17. :contentReference[oaicite:10]{index=10}
+  'iphone-17-pro-max':  { width: 440, height: 956 },  // based on mapping from iPhone 17 Pro/Max specs. :contentReference[oaicite:11]{index=11}
+  'pixel-8':            { width: 412, height: 915 },  // approximate for Google Pixel 8
+  'samsung-s20': { width: 360, height: 800 },
+  'samsung-s21': { width: 384, height: 854 },
+  'samsung-s22': { width: 360, height: 780 },
+  'samsung-s23': { width: 360, height: 780 },
+  'samsung-s24': { width: 360, height: 780 },
+
+  // Specific Tablet Devices
   'ipad-mini': { width: 768, height: 1024 },
   'ipad-air': { width: 820, height: 1180 },
   'ipad-pro-11': { width: 834, height: 1194 },
@@ -28,13 +60,14 @@ const VIEWPORT_PRESETS = {
   'samsung-gtab-s7': { width: 800, height: 1280 },
   'surface-pro-7': { width: 912, height: 1368 },
 
-  // Desktop
-  'laptop': { width: 1366, height: 768 },
-  'desktop': { width: 1920, height: 1080 },
-  'desktop-4k': { width: 3840, height: 2160 },
+  // Specific Laptop Devices
   'macbook-air': { width: 1440, height: 900 },
   'macbook-pro-13': { width: 2560, height: 1600 },
   'macbook-pro-16': { width: 3072, height: 1920 },
+  'macbook-m1-13':   { width: 1280, height: 800 },   // for 13″ Air/Pro early M1, based on 1280×800 data  
+  'macbook-m1-14':   { width: 1728, height: 1117 },  // for 14″ Pro, 2021 spec (estimated)  
+  'macbook-m1-16':   { width: 1536, height: 960 },   // for 16″ Pro around that generation  
+  'macbook-m5-14':   { width: 1512, height: 982 }    // your earlier estimate for 14″ M5 (to be verified)  
 };
 
 // Load access keys
