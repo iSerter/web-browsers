@@ -169,7 +169,8 @@ class WebRequestsQueue {
 
   async getRequestResult(requestId) {
     const client = await this.ensureClient();
-    return client.hGet(requestId, 'result');
+    const result = await client.hGet(requestId, 'result');
+    return result ? JSON.parse(result) : null;
   }
 
   async deleteRequest(requestId) {
