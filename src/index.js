@@ -113,6 +113,23 @@ app.get("/", (req, res) => {
   res.send("API server is running");
 });
 
+app.get("/status", authenticate, async (req, res) => {
+  try {
+    const stats = await queue.getQueueStats();
+    return res.status(200).json({
+      code: 200,
+      ...stats
+    });
+  } catch (err) {
+    console.error('Failed to get queue stats:', err);
+    return res.status(500).json({ 
+      code: 500, 
+      message: 'Failed to retrieve queue status',
+      error: err.message
+    });
+  }
+});
+
 app.post("/browse", authenticate, async (req, res) => {
   console.log(req.body);
   const url = req.body.url;

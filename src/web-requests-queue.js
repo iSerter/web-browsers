@@ -173,6 +173,32 @@ class WebRequestsQueue {
     return result ? JSON.parse(result) : null;
   }
 
+  async getQueueStats() {
+    try {
+      const client = await this.ensureClient();
+      const stats = {
+        queues: [],
+        total: 0
+      };
+
+      for (let i = 1; i <= this.queueCount; i++) {
+        const queueName = this.getQueueName(i);
+        const length = await client.lLen(queueName);
+        
+        stats.queues.push({
+          queueNumber: i,
+          pendingRequests: length
+        });
+        stats.total += length;
+      }
+
+      return stats;
+    } catch (err) {
+      log('queue.stats.error', { message: err.message, stack: err.stack });
+      throw err;
+    }
+  }
+
   async deleteRequest(requestId) {
     const client = await this.ensureClient();
     
