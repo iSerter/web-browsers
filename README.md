@@ -93,7 +93,18 @@ For a quick verification of the API server's availability: `curl http://127.0.0.
 
 ### Troubleshooting & Frequently Used Commands 
 
+#### Fix: `ERROR: for ... 'ContainerConfig'` (Ubuntu 24.04 / Cyberpanel)
+If you see a Python traceback or `ContainerConfig` error when using `docker-compose`, it means you are using the obsolete v1 version. Install the modern Docker Compose V2 plugin:
+
+```sh
+sudo apt update
+sudo apt install docker-compose-v2
+# Then use 'docker compose' (no hyphen)
+docker compose up -d
 ```
+
+#### Debugging & Commands
+```sh
 docker exec -it wb-app /bin/bash
 npx @puppeteer/browsers install chrome@133.0.6943.53
 export PUPPETEER_EXECUTABLE_PATH=/home/app/chrome/linux-133.0.6943.53/chrome-linux64/chrome
