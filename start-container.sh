@@ -37,8 +37,8 @@ else
   echo "[startup][warn] System bus socket still missing; Chromium may log errors"
 fi
 
-echo "[startup] Starting redis-server"
-service redis-server start
+echo "[startup] Ensuring X11 socket directory exists"
+mkdir -p /tmp/.X11-unix 2>/dev/null || true
 
 echo "[startup] Starting X virtual screens script"
 sh ./util/start-x-screens.sh

@@ -4,89 +4,74 @@ ENV LANG=en_US.UTF-8
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV XDG_CONFIG_HOME=/tmp/.chromium-config
 ENV XDG_CACHE_HOME=/tmp/.chromium-cache
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+# Runtime dir for the manual DBus session bus (created at startup by start-container.sh)
+ENV XDG_RUNTIME_DIR=/tmp/runtime-dbus
+ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/runtime-dbus/bus
 
-# Install core dependencies
-RUN apt-get update && apt-get install -y \
-    dbus \
-    curl \
-    sudo \
-    build-essential \
-    wget \
-    nano \
-    gnupg \
-    ca-certificates \
-    apt-transport-https \
-    x11-xserver-utils x11-utils \
-    xvfb \
-    inotify-tools
+# Install core dependencies, Google Chrome + fonts, then clean apt caches in a single layer.
+# Note: redis-server is intentionally NOT installed — Redis runs as a separate
+# service (external by default, optional bundled container via docker-compose).
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      dbus \
+      curl \
+      wget \
+      gnupg \
+      ca-certificates \
+      apt-transport-https \
+      x11-xserver-utils x11-utils \
+      xvfb; \
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg; \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      google-chrome-stable \
+      fonts-ipafont-gothic \
+      fonts-wqy-zenhei \
+      fonts-thai-tlwg \
+      fonts-kacst \
+      fonts-freefont-ttf fonts-terminus fonts-inconsolata fonts-dejavu ttf-bitstream-vera fonts-noto-core fonts-noto-cjk fonts-noto-extra fonts-font-awesome \
+      libasound2 libgconf-2-4 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
+      libxss1; \
+    npm install -g pm2; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/*.deb /var/cache/apt/archives
 
-# Install redis-server
-RUN apt-get install -y redis-server
-
-# Install latest chrome dev package and fonts to support major charsets (Chinese, Japanese, Arabic, Hebrew, Thai and a few others)
-# Note: this installs the necessary libs to make the bundled version of Chrome that Puppeteer
-# installs, work.
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' && \
-    apt-get update
-    
-RUN apt-get install -y --no-install-recommends \
-    google-chrome-stable \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf fonts-terminus fonts-inconsolata fonts-dejavu ttf-bitstream-vera fonts-noto-core fonts-noto-cjk fonts-noto-extra fonts-font-awesome \
-    libasound2 libgconf-2-4 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
-    libxss1
-
-# delete apt lists, /tmp/*.deb files, and /var/cache/apt/archives to free up space
-RUN rm -rf /var/lib/apt/lists/* /tmp/*.deb /var/cache/apt/archives
-
-# Install PM2 globally
-RUN npm install -g pm2
-
-# Create a user with name 'app' and group that will be used to run the app
+# Create an unprivileged user to run the app
 RUN groupadd -r app && useradd -rm -g app -G audio,video app
+
+# /run/dbus must be writable by the app user so start-container.sh can place the
+# system_bus_socket symlink there without root.
+RUN mkdir -p /run/dbus && chown app:app /run/dbus
 
 # Set up the working directory
 WORKDIR /home/app
 
-# Install NPM dependencies
-COPY package.json ./package.json
-COPY package-lock.json ./package-lock.json
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
-RUN rm -rf ./node_modules && \
-    # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" npm install && \
+# Install NPM dependencies (skip Puppeteer's bundled Chrome — we use the system one)
+COPY package.json package-lock.json ./
+RUN PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" npm ci --omit=dev && \
     npm cache clean --force
 
-# Copy rest of the app
+# Copy the rest of the app
 COPY . .
 
-# rename the .env.example file to .env
-RUN mv .env.example .env
-
-# Give app user access to all the project folders
+# Own the project as the app user (no world-writable perms)
 RUN chown -R app:app /home/app
-RUN chmod -R 777 /home/app
 
-# make /tmp writable
-RUN chmod -R 777 /tmp
-
-# Expose the port your app runs on
-EXPOSE 3030
-
-USER root
-# Set runtime dir for manual DBus session bus
-ENV XDG_RUNTIME_DIR=/tmp/runtime-dbus
-RUN mkdir -p $XDG_RUNTIME_DIR && chmod 700 $XDG_RUNTIME_DIR
-
-# Pre-set (deterministic path) so child processes inherit even if they spawn before script export
-ENV DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/runtime-dbus/bus
-
-# Copy startup script and use it as entrypoint
+# Copy startup script and make it executable
 COPY start-container.sh /usr/local/bin/start-container.sh
 RUN chmod +x /usr/local/bin/start-container.sh
+
+# Expose the API port
+EXPOSE 3030
+
+# Healthcheck against the API root endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl -fsS "http://localhost:${API_PORT:-3030}/" || exit 1
+
+# Run as the unprivileged user (Chrome runs with --no-sandbox, so no root needed)
+USER app
 
 CMD ["/usr/local/bin/start-container.sh"]

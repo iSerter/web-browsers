@@ -1,4 +1,4 @@
-# Dockerized Web Browsers [WIP]
+# Dockerized Web Browsers
 
 Yes, it's dirty, but it works.
 
@@ -10,11 +10,66 @@ A basic setup for my web browser experiments. Starting with Puppeteer first.
 - - it checks the request status every 70ms with a 30s timeout.
 
 
+## Configuration
+
+All runtime config is driven by environment variables (see `.env.example`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_PORT` | `3030` | API server port. |
+| `BROWSER_COUNT` | `2` | Number of concurrent browser workers / queues. |
+| `ACCESS_KEYS` | — | **Required in production.** Comma-separated list of valid API keys. |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection string. External by default. |
+| `PROXY_DEFAULT`, `PROXY_<CC>` | — | Per-country proxy URLs (e.g. `PROXY_US`). |
+| `PUPPETEER_LAUNCH_LOG` | `/tmp/puppeteer-session.log` | Puppeteer log path. |
+| `LOG_CLEAN_INTERVAL_MS` | `3600000` | Log cleanup interval. |
+| `LOG_CLEAN_STRATEGY` | `delete` | `delete` or `truncate`. |
+
+Access keys come from `ACCESS_KEYS`. For local dev only, an `accessKeys.json`
+file (`{ "validKeys": [...] }`) is used as a fallback if `ACCESS_KEYS` is unset
+(see `accessKeys.example.json`). The legacy committed `accessKeys.json` is no
+longer tracked in git.
+
 ## Setup
 
+### Local development
+
+Live source mounts + a bundled Redis, port published on the host:
+
 ```sh
-docker compose up
+cp .env.example .env          # then edit ACCESS_KEYS, proxies, etc.
+COMPOSE_PROFILES=bundled-redis \
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
+
+### Production (plain Docker Compose)
+
+Uses an **external** Redis by default — set `REDIS_URL` to your shared instance:
+
+```sh
+ACCESS_KEYS=... REDIS_URL=redis://:pass@host:6379/0 docker compose up -d --build
+```
+
+To bundle Redis instead of using a remote one, enable the optional container:
+
+```sh
+COMPOSE_PROFILES=bundled-redis REDIS_URL=redis://redis:6379 \
+  docker compose up -d --build
+```
+
+## Deployment on Coolify (v4.1)
+
+1. Create a **Docker Compose** resource pointing at this repo (uses
+   `docker-compose.yml`).
+2. Set environment variables in the Coolify UI (mark secrets accordingly):
+   - `ACCESS_KEYS`, `REDIS_URL` (your shared/remote Redis), `BROWSER_COUNT`,
+     `API_PORT`, and any `PROXY_*` you need.
+3. **Redis:** leave the `bundled-redis` profile off and point `REDIS_URL` at your
+   existing Redis. To bundle one instead, set `COMPOSE_PROFILES=bundled-redis`
+   and `REDIS_URL=redis://redis:6379` (or provision a Coolify Redis resource).
+4. Assign a domain to the `web-browsers` service; Coolify's proxy routes to the
+   exposed port `3030` (no host port publishing in production).
+5. The image runs as a non-root `app` user, with a healthcheck on `GET /`.
 
 ## Use 
 
@@ -118,15 +173,14 @@ dbus-monitor --system
 dbus-send --system --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames
 ```
 
-# Copy .env and restart all apps
-docker cp .env wb-app:/home/app/.env && \
-docker exec wb-app pm2 restart all
+#### Updating environment (deprecated)
 
-
+Previously `.env` was copied into a running container with `update-env.sh`.
+Config now comes from environment variables — update them in Coolify (or your
+compose `.env`) and redeploy/restart the service instead.
 
 ### TODO
 
-- run the app with `app` user. (currently chrome is complaining about it)
 - implement proxies
 
 ## Logging

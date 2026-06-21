@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# DEPRECATED: Configuration now comes from environment variables, not a
+# bind-mounted .env file. On Coolify, update env vars in the UI and redeploy.
+# For local compose, edit .env and re-run `docker compose up`.
+# This script remains only for legacy containers that still mount /home/app/.env.
+echo "⚠️  update-env.sh is deprecated — manage config via environment variables and redeploy." >&2
+
 # Script to update .env file in the Docker container and restart PM2 apps
 # Usage: ./update-env.sh [path-to-new-env-file]
 

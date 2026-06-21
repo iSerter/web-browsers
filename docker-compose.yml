@@ -1,46 +1,85 @@
-version: '3.8'
+# Production / Coolify deployment.
+#
+# Configuration is driven entirely by environment variables (managed by Coolify
+# in production, or a local .env file for `docker compose` runs).
+#
+# Redis:
+#   - Default: external. Set REDIS_URL to your shared/remote Redis.
+#   - Bundled: enable the optional container with the "bundled-redis" profile
+#     (e.g. COMPOSE_PROFILES=bundled-redis) and set REDIS_URL=redis://redis:6379
+#
+# For local development with live source mounts, add the dev override:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 
 services:
   web-browsers:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: web-browsers-app
-    ports:
-      - "3030:3030"
     environment:
       - NODE_ENV=production
       - LANG=en_US.UTF-8
+      - API_PORT=${API_PORT:-3030}
+      - BROWSER_COUNT=${BROWSER_COUNT:-5}
+      - ACCESS_KEYS=${ACCESS_KEYS}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      # Proxies (leave unset to disable a given country)
+      - PROXY_DEFAULT=${PROXY_DEFAULT:-}
+      - PROXY_US=${PROXY_US:-}
+      - PROXY_UK=${PROXY_UK:-}
+      - PROXY_CA=${PROXY_CA:-}
+      - PROXY_AU=${PROXY_AU:-}
+      - PROXY_DE=${PROXY_DE:-}
+      - PROXY_FR=${PROXY_FR:-}
+      - PROXY_IT=${PROXY_IT:-}
+      - PROXY_ES=${PROXY_ES:-}
+      - PROXY_PL=${PROXY_PL:-}
+      - PROXY_NL=${PROXY_NL:-}
+      # Logging
+      - PUPPETEER_LAUNCH_LOG=${PUPPETEER_LAUNCH_LOG:-/tmp/puppeteer-session.log}
+      - LOG_CLEAN_INTERVAL_MS=${LOG_CLEAN_INTERVAL_MS:-3600000}
+      - LOG_CLEAN_STRATEGY=${LOG_CLEAN_STRATEGY:-delete}
+      # Chrome / DBus runtime
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
       - XDG_CONFIG_HOME=/tmp/.chromium-config
       - XDG_CACHE_HOME=/tmp/.chromium-cache
       - XDG_RUNTIME_DIR=/tmp/runtime-dbus
       - DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/runtime-dbus/bus
-    volumes:
-      # Mount application code for development (optional - comment out for production)
-      - ./src:/home/app/src
-      - ./util:/home/app/util
-      - ./logs:/home/app/logs
-      # Share /dev/shm to prevent Chrome crashes
-      - /dev/shm:/dev/shm
-      # Copy .env file into container, overwriting any existing one
-      - ./.env:/home/app/.env
-      - ./accessKeys.json:/home/app/accessKeys.json
+    # Coolify's proxy routes to this port; no host port publishing needed.
+    # (Use the dev override to publish a host port for local testing.)
+    expose:
+      - "3030"
     shm_size: '2gb'
-    # Required for Chrome to run properly
+    # Share /dev/shm to prevent Chrome crashes
+    volumes:
+      - /dev/shm:/dev/shm
     cap_add:
       - SYS_ADMIN
-    # Security options for Chrome sandbox
     security_opt:
       - seccomp:unconfined
     restart: unless-stopped
-    networks:
-      - web-browsers-network
-      - sg-network
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3030/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
-networks:
-  web-browsers-network:
-    driver: bridge
-  sg-network:
-    external: true
+  # Optional bundled Redis — only started when the "bundled-redis" profile is on.
+  # For production, prefer a managed/shared Redis and set REDIS_URL accordingly.
+  redis:
+    image: redis:7-alpine
+    profiles: ["bundled-redis"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:

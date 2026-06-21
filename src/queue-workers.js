@@ -1,4 +1,4 @@
-require('dotenv').config();
+const config = require('./util/config');
 const { startSession, stopSession } = require('./browser/puppeteer-chrome-xvfb/index.js');
 const WebRequestsQueue = require('./web-requests-queue.js');
 const { buildLogger } = require('./util/logger');
@@ -26,7 +26,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-const browserCount = process.env.BROWSER_COUNT || 2;
+const browserCount = config.browserCount;
 const queue = new WebRequestsQueue(browserCount);
 
 const proxies = getAvailableProxies();

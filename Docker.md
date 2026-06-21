@@ -31,30 +31,42 @@ docker build --build-arg NODE_VERSION=22 -t iserter/web-browsers .
 
 ## Running the Container
 
+> Redis is no longer bundled in this image. Provide a Redis instance via
+> `REDIS_URL` (external), or use the optional `redis` service in
+> `docker-compose.yml` (`COMPOSE_PROFILES=bundled-redis`).
+
 ### Basic run
 
-```bash
-docker run -d -p 3030:3030 --name wb-app iserter/web-browsers
-```
-
-### Run with environment variables
+`ACCESS_KEYS` is required and `REDIS_URL` should point at a reachable Redis:
 
 ```bash
 docker run -d -p 3030:3030 \
+  -e ACCESS_KEYS=key-one,key-two \
+  -e REDIS_URL=redis://host.docker.internal:6379 \
+  --shm-size=2g \
+  --cap-add=SYS_ADMIN \
+  --security-opt seccomp=unconfined \
+  --name wb-app \
+  iserter/web-browsers
+```
+
+### Run with additional environment variables
+
+```bash
+docker run -d -p 3030:3030 \
+  -e ACCESS_KEYS=key-one,key-two \
+  -e REDIS_URL=redis://host.docker.internal:6379 \
+  -e BROWSER_COUNT=5 \
+  -e PROXY_DEFAULT="http://user:pass@host:port" \
   -e LOG_CLEAN_INTERVAL_MS=600000 \
   -e LOG_CLEAN_STRATEGY=truncate \
+  --shm-size=2g --cap-add=SYS_ADMIN --security-opt seccomp=unconfined \
   --name wb-app \
   iserter/web-browsers
 ```
 
-### Run with volume mounts
-
-```bash
-docker run -d -p 3030:3030 \
-  -v $(pwd)/logs:/tmp \
-  --name wb-app \
-  iserter/web-browsers
-```
+For most use cases prefer `docker compose` — see the README for local-dev and
+Coolify deployment instructions.
 
 ## Publishing to Docker Hub
 
@@ -224,10 +236,3 @@ docker build --no-cache -t iserter/web-browsers .
 docker build --progress=plain -t iserter/web-browsers .
 ```
 
-### SG setup
-
-
-```
-docker network create sg-network
-docker network connect sg-network iserter.web-browsers
-```

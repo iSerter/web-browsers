@@ -1,9 +1,7 @@
-require('dotenv').config();
+const config = require('./util/config');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
 const WebRequestsQueue = require('./web-requests-queue');
 const Browsers = require('./util/browsers');
 
@@ -70,31 +68,30 @@ const VIEWPORT_PRESETS = {
   'macbook-m5-14':   { width: 1512, height: 982 }    // your earlier estimate for 14″ M5 (to be verified)  
 };
 
-// Load access keys
-const accessKeysPath = path.join(__dirname, '..', 'accessKeys.json');
-const accessKeys = JSON.parse(fs.readFileSync(accessKeysPath, 'utf8'));
+// Access keys are loaded from config (ACCESS_KEYS env var, with accessKeys.json fallback)
+const accessKeys = config.accessKeys;
 
 // Authentication middleware
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader) {
     return res.status(401).json({ code: 401, message: 'Authorization header required' });
   }
-  
+
   // Support both "Bearer <token>" and "<token>" formats
-  const token = authHeader.startsWith('Bearer ') 
-    ? authHeader.substring(7) 
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.substring(7)
     : authHeader;
-  
-  if (!accessKeys.validKeys.includes(token)) {
+
+  if (!accessKeys.includes(token)) {
     return res.status(403).json({ code: 403, message: 'Invalid access key' });
   }
-  
+
   next();
 };
-const port = Number(process.env.API_PORT) || 3030;
-const queue = new WebRequestsQueue(process.env.BROWSER_COUNT || 2);
+const port = config.port;
+const queue = new WebRequestsQueue(config.browserCount);
 const browsers = new Browsers();
 
 app.use(bodyParser.json({ limit: "50mb" }));

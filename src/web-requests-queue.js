@@ -16,7 +16,8 @@ class WebRequestsQueue {
   }
 
   getRedisUrl() {
-    return process.env.REDIS_URL || undefined; // allow override via env
+    // External by default; falls back to localhost for the optional bundled redis.
+    return process.env.REDIS_URL || 'redis://localhost:6379';
   }
 
   createClient() {
