@@ -39,6 +39,8 @@ services:
       - PUPPETEER_LAUNCH_LOG=${PUPPETEER_LAUNCH_LOG:-/tmp/puppeteer-session.log}
       - LOG_CLEAN_INTERVAL_MS=${LOG_CLEAN_INTERVAL_MS:-3600000}
       - LOG_CLEAN_STRATEGY=${LOG_CLEAN_STRATEGY:-delete}
+      # Forward raw Chrome stdout/stderr (DevTools/DBus/GCM noise) — debug only.
+      - CHROME_DUMPIO=${CHROME_DUMPIO:-false}
       # Chrome / DBus runtime
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
@@ -59,6 +61,11 @@ services:
     security_opt:
       - seccomp:unconfined
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:3030/"]
       interval: 30s

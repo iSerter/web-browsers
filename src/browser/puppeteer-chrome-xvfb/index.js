@@ -58,6 +58,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
       const crashDumpsDir = "/tmp/chrome_crash_dumps";
       const chromeFlags = [
         "--no-first-run",
+        "--log-level=3",        // suppress INFO/WARNING/ERROR internal logs (dbus, gcm)
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-gpu",
@@ -109,7 +110,7 @@ const startSession = ({ args = [], customConfig = {}, proxy = null }) => {
         headless: false,
         executablePath: chromePath,
         args: chromeFlags,
-        dumpio: true,
+        dumpio: process.env.CHROME_DUMPIO === 'true',
         ignoreHTTPSErrors: true,
         devtools: false,
         timeout: 8000, // needed for strange bug. https://github.com/puppeteer/puppeteer/issues/10556#issuecomment-1681602191
