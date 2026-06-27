@@ -37,6 +37,9 @@ else
   echo "[startup][warn] System bus socket still missing; Chromium may log errors"
 fi
 
+# /tmp/.X11-unix is created root-owned + sticky (1777) in the Dockerfile so Xvfb
+# doesn't warn about ownership. This mkdir is a defensive no-op for the normal
+# case (e.g. if /tmp is a fresh tmpfs mount, it recreates the dir as the app user).
 echo "[startup] Ensuring X11 socket directory exists"
 mkdir -p /tmp/.X11-unix 2>/dev/null || true
 

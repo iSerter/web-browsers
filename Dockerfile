@@ -46,6 +46,13 @@ RUN groupadd -r app && useradd -rm -g app -G audio,video app
 # system_bus_socket symlink there without root.
 RUN mkdir -p /run/dbus && chown app:app /run/dbus
 
+# Create the X11 socket directory as root with the sticky bit (1777). Xvfb's
+# transport layer checks this dir on startup and warns ("Owner of /tmp/.X11-unix
+# should be set to root") if it isn't root-owned + sticky. Creating it here means
+# the later `mkdir -p` in start-container.sh (run as the app user) is a no-op and
+# leaves the correct root ownership in place.
+RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+
 # Set up the working directory
 WORKDIR /home/app
 
